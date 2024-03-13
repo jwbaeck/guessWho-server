@@ -13,6 +13,8 @@ function sendUserListToRoom(io, room) {
 
 function checkCapacityAndSendResponse(io, room) {
   if (users.size >= maxCapacity) {
+    console.log("최대 용량 도달, 응답 전송");
+
     const userList = Array.from(users.values())
       .filter(user => user.room === room)
       .map(user => ({ id: user.id, name: user.name }));
@@ -30,19 +32,22 @@ function setUpSocketServer(server) {
   });
 
   io.on("connect", socket => {
-    console.log("클라이언트 소켓 연결 성공");
+    socket.on("joinRoom", roomNumber => {
+      socket.join(roomNumber);
+    });
 
-    socket.on("submitNickname", nickname => {
-      const room = 1;
+    socket.on("submitNickname", data => {
+      const { nickname, roomNumber } = data;
 
       users.set(socket.id, {
         id: socket.id,
         name: nickname,
-        room,
+        room: roomNumber,
       });
 
-      sendUserListToRoom(io, room);
-      checkCapacityAndSendResponse(io, room);
+      sendUserListToRoom(io, roomNumber);
+
+      checkCapacityAndSendResponse(io, roomNumber);
     });
   });
 
