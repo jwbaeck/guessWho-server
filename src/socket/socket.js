@@ -28,6 +28,16 @@ function assignLiar(room) {
   users.set(liar.id, { ...liar, isLiar: true });
 }
 
+function distributeRoles(io, room) {
+  const userList = Array.from(users.values()).filter(
+    user => user.room === room,
+  );
+
+  userList.forEach(user => {
+    io.to(user.id).emit("roleInfo", { isLiar: user.isLiar });
+  });
+}
+
 function checkCapacityAndSendResponse(io, room) {
   const currentCapacity = Array.from(users.values()).filter(
     user => user.room === room,
@@ -35,6 +45,7 @@ function checkCapacityAndSendResponse(io, room) {
 
   if (currentCapacity === MAX_USERS) {
     assignLiar(room);
+    distributeRoles(io, room);
   }
 
   sendUserListToRoom(io, room);
