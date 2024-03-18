@@ -51,6 +51,29 @@ function checkCapacityAndSendResponse(io, room) {
   sendUserListToRoom(io, room);
 }
 
+function registerWebRTCEvents(socket, io) {
+  socket.on("webRTC-offer", data => {
+    socket.to(data.target).emit("webRTC-offer", {
+      sdp: data.sdp,
+      sender: socket.id,
+    });
+  });
+
+  socket.on("webRTC-answer", data => {
+    socket.to(data.target).emit("webRTC-answer", {
+      sdp: data.sdp,
+      sender: socket.id,
+    });
+  });
+
+  socket.on("webRTC-candidate", data => {
+    socket.to(data.target).emit("webRTC-candidate", {
+      candidate: data.candidate,
+      sender: socket.id,
+    });
+  });
+}
+
 function setUpSocketServer(server) {
   const io = socketIo(server, {
     cors: {
@@ -75,6 +98,7 @@ function setUpSocketServer(server) {
       });
 
       checkCapacityAndSendResponse(io, roomNumber);
+      registerWebRTCEvents(socket, io);
     });
   });
 
