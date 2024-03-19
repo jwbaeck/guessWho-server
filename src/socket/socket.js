@@ -100,6 +100,14 @@ function setUpSocketServer(server) {
       checkCapacityAndSendResponse(io, roomNumber);
       registerWebRTCEvents(socket, io);
     });
+
+    socket.on("userEnteredChatRoom", () => {
+      const user = users.get(socket.id);
+
+      if (user) {
+        io.to(user.room).emit("userEntered", socket.id);
+      }
+    });
   });
 
   return io;
