@@ -106,6 +106,8 @@ function setUpSocketServer(server) {
         isLiar: false,
       });
 
+      socket.emit("yourSocketId", { socketId: socket.id });
+
       checkCapacityAndSendResponse(io, roomNumber);
     });
 
