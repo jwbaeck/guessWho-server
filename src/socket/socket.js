@@ -38,6 +38,18 @@ function distributeRoles(io, room) {
   });
 }
 
+function checkAndStartGame(io, room) {
+  const currentCapacity = Array.from(users.values()).filter(
+    user => user.room === room,
+  ).length;
+
+  if (currentCapacity === MAX_USERS) {
+    const startTime = new Date().getTime() + 1 * 10 * 1000;
+
+    io.to(room).emit("gameStart", { startTime });
+  }
+}
+
 function checkCapacityAndSendResponse(io, room) {
   const currentCapacity = Array.from(users.values()).filter(
     user => user.room === room,
@@ -46,32 +58,29 @@ function checkCapacityAndSendResponse(io, room) {
   if (currentCapacity === MAX_USERS) {
     assignLiar(room);
     distributeRoles(io, room);
+    checkAndStartGame(io, room);
   }
 
   sendUserListToRoom(io, room);
 }
 
 function registerWebRTCEvents(socket, io) {
-  socket.on("webRTC-offer", data => {
-    socket.to(data.target).emit("webRTC-offer", {
-      sdp: data.sdp,
-      sender: socket.id,
-    });
-  });
-
-  socket.on("webRTC-answer", data => {
-    socket.to(data.target).emit("webRTC-answer", {
-      sdp: data.sdp,
-      sender: socket.id,
-    });
-  });
-
-  socket.on("webRTC-candidate", data => {
+  socket.on("webRTC-offer", data =>
+    socket
+      .to(data.target)
+      .emit("webRTC-offer", { sdp: data.sdp, sender: socket.id }),
+  );
+  socket.on("webRTC-answer", data =>
+    socket
+      .to(data.target)
+      .emit("webRTC-answer", { sdp: data.sdp, sender: socket.id }),
+  );
+  socket.on("webRTC-candidate", data =>
     socket.to(data.target).emit("webRTC-candidate", {
       candidate: data.candidate,
       sender: socket.id,
-    });
-  });
+    }),
+  );
 }
 
 function setUpSocketServer(server) {
@@ -98,7 +107,6 @@ function setUpSocketServer(server) {
       });
 
       checkCapacityAndSendResponse(io, roomNumber);
-      registerWebRTCEvents(socket, io);
     });
 
     socket.on("userEnteredChatRoom", () => {
@@ -106,8 +114,12 @@ function setUpSocketServer(server) {
 
       if (user) {
         io.to(user.room).emit("userEntered", socket.id);
+
+        checkCapacityAndSendResponse(io, user.room);
       }
     });
+
+    registerWebRTCEvents(socket, io);
   });
 
   return io;
