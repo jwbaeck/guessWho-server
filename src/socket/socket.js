@@ -1,6 +1,8 @@
 const socketIo = require("socket.io");
 
+const gameStarted = new Map();
 const users = new Map();
+const votes = {};
 const MAX_USERS = 4;
 
 function sendUserListToRoom(io, room) {
@@ -55,13 +57,59 @@ function checkCapacityAndSendResponse(io, room) {
     user => user.room === room,
   ).length;
 
-  if (currentCapacity === MAX_USERS) {
+  if (!gameStarted.has(room) && currentCapacity === MAX_USERS) {
     assignLiar(room);
+
+    gameStarted.set(room, true);
+  }
+
+  if (currentCapacity === MAX_USERS) {
     distributeRoles(io, room);
     checkAndStartGame(io, room);
   }
 
   sendUserListToRoom(io, room);
+}
+
+function checkAllVotesSubmitted() {
+  const totalVotes = Object.values(votes).reduce(
+    (sum, numVotes) => sum + numVotes,
+    0,
+  );
+
+  return totalVotes === MAX_USERS;
+}
+
+function findTopVotedUser() {
+  const topVoter = Object.entries(votes).reduce(
+    (acc, [userId, numVotes]) => {
+      if (numVotes > acc.maxVotes) {
+        acc.userId = userId;
+        acc.maxVotes = numVotes;
+      }
+
+      return acc;
+    },
+    { userId: null, maxVotes: 0 },
+  );
+
+  return topVoter.userId;
+}
+
+function verifyIsLiar(topVotedUserId) {
+  const user = users.get(topVotedUserId);
+
+  return user && user.isLiar;
+}
+
+function createFinalResult(resultData, allUsers) {
+  const { isLiarCorrectlyIdentified, topVotedUserId, liarId } = resultData;
+  const liarName = allUsers.get(liarId).name;
+  const topVotedUserName = allUsers.get(topVotedUserId).name;
+  const victoryStatus = isLiarCorrectlyIdentified ? "시민들" : "라이어";
+  const finalResult = `${victoryStatus}의 승리입니다. 진짜 라이어는 ${liarName} 입니다. 최다 득표를 받은 사람은 ${topVotedUserName} 입니다.`;
+
+  return finalResult;
 }
 
 function registerWebRTCEvents(socket, io) {
@@ -118,6 +166,30 @@ function setUpSocketServer(server) {
         io.to(user.room).emit("userEntered", socket.id);
 
         checkCapacityAndSendResponse(io, user.room);
+      }
+    });
+
+    socket.on("submitVote", ({ votedForId }) => {
+      if (!votes[votedForId]) {
+        votes[votedForId] = 0;
+      }
+
+      votes[votedForId] += 1;
+
+      if (checkAllVotesSubmitted()) {
+        const topVotedUserId = findTopVotedUser();
+        const isLiarCorrectlyIdentified = verifyIsLiar(topVotedUserId);
+
+        const resultData = {
+          isLiarCorrectlyIdentified,
+          votes,
+          topVotedUserId,
+          liarId: Array.from(users.values()).find(user => user.isLiar).id,
+        };
+
+        const finalData = createFinalResult(resultData, users);
+
+        io.emit("voteResults", finalData);
       }
     });
 
