@@ -80,20 +80,17 @@ function checkAllVotesSubmitted() {
   return totalVotes === MAX_USERS;
 }
 
-function findTopVotedUser() {
-  const topVoter = Object.entries(votes).reduce(
-    (acc, [userId, numVotes]) => {
-      if (numVotes > acc.maxVotes) {
-        acc.userId = userId;
-        acc.maxVotes = numVotes;
-      }
-
-      return acc;
-    },
-    { userId: null, maxVotes: 0 },
+function findTopVotedUserAndCheckUnique() {
+  const voteCounts = Object.values(votes);
+  const highestVoteCount = Math.max(...voteCounts);
+  const topVoters = Object.entries(votes).filter(
+    ([_, numVotes]) => numVotes === highestVoteCount,
   );
 
-  return topVoter.userId;
+  if (topVoters.length === 1) {
+    return { userId: topVoters[0][0], isUnique: true };
+  }
+  return { userId: null, isUnique: false };
 }
 
 function verifyIsLiar(topVotedUserId) {
@@ -103,8 +100,9 @@ function verifyIsLiar(topVotedUserId) {
 }
 
 function createVotingResultData() {
-  const topVotedUserId = findTopVotedUser();
-  const isTopVotedUserLiar = verifyIsLiar(topVotedUserId);
+  const { userId: topVotedUserId, isUnique } = findTopVotedUserAndCheckUnique();
+  const isTopVotedUserLiar =
+    topVotedUserId && isUnique && verifyIsLiar(topVotedUserId);
   const userVotes = {};
 
   users.forEach((value, key) => {
