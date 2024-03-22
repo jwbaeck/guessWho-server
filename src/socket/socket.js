@@ -102,14 +102,22 @@ function verifyIsLiar(topVotedUserId) {
   return user && user.isLiar;
 }
 
-function createFinalResult(resultData, allUsers) {
-  const { isLiarCorrectlyIdentified, topVotedUserId, liarId } = resultData;
-  const liarName = allUsers.get(liarId).name;
-  const topVotedUserName = allUsers.get(topVotedUserId).name;
-  const victoryStatus = isLiarCorrectlyIdentified ? "시민들" : "라이어";
-  const finalResult = `${victoryStatus}의 승리입니다. 진짜 라이어는 ${liarName} 입니다. 최다 득표를 받은 사람은 ${topVotedUserName} 입니다.`;
+function createVotingResultData() {
+  const topVotedUserId = findTopVotedUser();
+  const isTopVotedUserLiar = verifyIsLiar(topVotedUserId);
+  const userVotes = {};
 
-  return finalResult;
+  users.forEach((value, key) => {
+    userVotes[key] = votes[key] || 0;
+  });
+
+  const resultData = {
+    isLiarCorrectlyIdentified: isTopVotedUserLiar,
+    votes: userVotes,
+    topVotedUserId,
+  };
+
+  return resultData;
 }
 
 function registerWebRTCEvents(socket, io) {
@@ -169,27 +177,20 @@ function setUpSocketServer(server) {
       }
     });
 
-    socket.on("submitVote", ({ votedForId }) => {
-      if (!votes[votedForId]) {
+    socket.on("submitVote", ({ userId: votedForId }) => {
+      const votingUser = users.get(socket.id);
+
+      if (votingUser && !votes[votedForId]) {
         votes[votedForId] = 0;
       }
 
       votes[votedForId] += 1;
 
       if (checkAllVotesSubmitted()) {
-        const topVotedUserId = findTopVotedUser();
-        const isLiarCorrectlyIdentified = verifyIsLiar(topVotedUserId);
+        const votingResult = createVotingResultData();
+        const userRoom = votingUser.room;
 
-        const resultData = {
-          isLiarCorrectlyIdentified,
-          votes,
-          topVotedUserId,
-          liarId: Array.from(users.values()).find(user => user.isLiar).id,
-        };
-
-        const finalData = createFinalResult(resultData, users);
-
-        io.emit("voteResults", finalData);
+        io.to(userRoom).emit("voteResults", votingResult);
       }
     });
 
