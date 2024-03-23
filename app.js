@@ -13,9 +13,7 @@ const usersRouter = require("./routes/users");
 
 const app = express();
 
-const PORT = process.env.PORT;
-
-const httpServer = http.createServer(app).listen(PORT);
+const httpServer = http.createServer(app).listen(process.env.PORT);
 const socketServer = setUpSocketServer(httpServer);
 
 app.set("views", path.join(__dirname, "views"));
