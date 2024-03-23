@@ -13,7 +13,7 @@ const usersRouter = require("./routes/users");
 
 const app = express();
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
 
 const httpServer = http.createServer(app).listen(PORT);
 const socketServer = setUpSocketServer(httpServer);
