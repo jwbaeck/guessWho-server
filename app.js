@@ -1,20 +1,14 @@
 require("dotenv").config();
-const http = require("http");
 const createError = require("http-errors");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const express = require("express");
 const logger = require("morgan");
 const path = require("path");
-
-const { setUpSocketServer } = require("./src/socket/socket");
 const indexRouter = require("./routes/index");
 const usersRouter = require("./routes/users");
 
 const app = express();
-
-const httpServer = http.createServer(app).listen(process.env.PORT);
-const socketServer = setUpSocketServer(httpServer);
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
