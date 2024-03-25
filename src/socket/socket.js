@@ -119,22 +119,17 @@ function createVotingResultData() {
 }
 
 function registerWebRTCEvents(socket, io) {
-  socket.on("webRTC-offer", data =>
-    socket
-      .to(data.target)
-      .emit("webRTC-offer", { sdp: data.sdp, sender: socket.id }),
-  );
-  socket.on("webRTC-answer", data =>
-    socket
-      .to(data.target)
-      .emit("webRTC-answer", { sdp: data.sdp, sender: socket.id }),
-  );
-  socket.on("webRTC-candidate", data =>
-    socket.to(data.target).emit("webRTC-candidate", {
-      candidate: data.candidate,
-      sender: socket.id,
-    }),
-  );
+  socket.on("webRTC-offer", (data) => {
+    io.to(data.target).emit("webRTC-offer", { sender: socket.id, sdp: data.sdp });
+  });
+
+  socket.on("webRTC-answer", (data) => {
+    io.to(data.target).emit("webRTC-answer", { sender: socket.id, sdp: data.sdp });
+  });
+
+  socket.on("webRTC-candidate", (data) => {
+    io.to(data.target).emit("webRTC-candidate", { sender: socket.id, candidate: data.candidate });
+  });
 }
 
 function setUpSocketServer(server) {
