@@ -46,7 +46,7 @@ function checkAndStartGame(io, room) {
   ).length;
 
   if (currentCapacity === MAX_USERS) {
-    const startTime = new Date().getTime() + 1 * 10 * 1000;
+    const startTime = new Date().getTime() + 3 * 60 * 1000;
 
     io.to(room).emit("gameStart", { startTime });
   }
